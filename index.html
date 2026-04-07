@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Shaun's Personal Dashboard v3.11b</title>
+<title>Shaun's Personal Dashboard v3.11c</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Inter:wght@300;400;500;600&family=Nunito:wght@300;400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /* ── PALETTE ACCENTS ─────────────────────────────── */
@@ -466,7 +466,7 @@ tr.sub-add-row td{background:rgba(124,111,232,0.03);}
 <!-- HEADER -->
 <header>
   <div class="logo-block">
-    <div class="logo-name" id="logoName">Shaun's Personal Dashboard <span style="font-size:11px;color:var(--muted);font-weight:400">v3.11b</span></div>
+    <div class="logo-name" id="logoName">Shaun's Personal Dashboard <span style="font-size:11px;color:var(--muted);font-weight:400">v3.11c</span></div>
     <div class="logo-sub" id="logoSub">Get Shit Done</div>
   </div>
   <div class="hdr-right">
@@ -1237,9 +1237,11 @@ async function loadFromSupabase(){
     // Notes
     if(sbNotes !== null){
       notes = sbNotes.map(n=>({
-        id:n.id, title:n.title||'', body:n.content||'',
-        color:n.color||'s-yellow', x:n.position_x||30, y:n.position_y||20,
-        created:new Date(n.created_at).getTime()
+        id: new Date(n.created_at).getTime() || Date.now(),
+        _sbid: n.id,  // Supabase UUID — critical for insert-vs-update check
+        title: n.title||'', body: n.content||'',
+        color: n.color||'s-yellow', x: n.position_x||30, y: n.position_y||20,
+        created: new Date(n.created_at).getTime()
       }));
       ls.set('gsd_notes', notes);
     }
@@ -1274,7 +1276,9 @@ async function loadFromSupabase(){
     // Intentions
     if(sbIntentions !== null){
       intentions = sbIntentions.map(i=>({
-        id:i.id, text:i.text, done:i.checked||false,
+        id: i.id,
+        _sbid: i.id,  // same value — intentions use SB UUID as local id too
+        text: i.text, done: i.checked||false,
         doneAt: i.checked ? new Date(i.updated_at||i.created_at).toISOString() : null,
         created: i.created_at
       }));
@@ -1412,14 +1416,17 @@ async function saveNotes(){
   ls.set('gsd_notes', notes);
   setSyncStatus('saving');
   try {
+    let didInsert = false;
     for(const n of notes){
       if(!n._sbid){
         const inserted = await sb.insert('notes',[{title:n.title,content:n.body,color:n.color,position_x:n.x,position_y:n.y}]);
-        if(inserted[0]) n._sbid = inserted[0].id;
+        if(inserted[0]){ n._sbid = inserted[0].id; didInsert = true; }
       } else {
         await sb.update('notes', n._sbid, {title:n.title,content:n.body,color:n.color,position_x:n.x,position_y:n.y});
       }
     }
+    // Re-save to localStorage after inserts so _sbid values persist across reloads
+    if(didInsert) ls.set('gsd_notes', notes);
     setSyncStatus('synced'); flashSaved();
   } catch(e){ console.error(e); setSyncStatus('error'); }
 }
@@ -2544,7 +2551,7 @@ function saveIdentity(){
   cfg.user=document.getElementById('setUser').value.trim()||'';
   cfg.birth=document.getElementById('setBirth').value||'';
   saveCfg();
-  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name)} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.11b</span>`;
+  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name)} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.11c</span>`;
   alert('Saved!');
 }
 function saveApiKey(){cfg.apiKey=document.getElementById('setApiKey').value.trim();saveCfg();alert('API key saved.');}
@@ -2749,7 +2756,7 @@ async function init(){
   document.documentElement.dataset.theme=cfg.theme||'dark';
   document.documentElement.dataset.palette=cfg.palette||'amethyst';
   document.getElementById('themeBtn').textContent=(cfg.theme||'dark')==='light'?'🌙 Dark':'☀ Light';
-  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name||"Shaun's Personal Dashboard")} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.11b</span>`;
+  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name||"Shaun's Personal Dashboard")} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.11c</span>`;
   applyAppearance();
 
   document.getElementById('maDate').value=today();
