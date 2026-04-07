@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Shaun's Personal Dashboard v3.11a</title>
+<title>Shaun's Personal Dashboard v3.11b</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Inter:wght@300;400;500;600&family=Nunito:wght@300;400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /* ── PALETTE ACCENTS ─────────────────────────────── */
@@ -255,6 +255,7 @@ input[type=date]{color-scheme:dark;}
 .ptab.active{background:var(--acc3);color:var(--acc2);border-color:var(--acc);}
 .ptab-add{padding:5px 10px;border-radius:20px;font-size:12px;cursor:pointer;border:1px dashed var(--border);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;transition:all .13s;}
 .ptab-add:hover{color:var(--text);}
+.ptab.drag-over{background:var(--acc);color:#fff;border-color:var(--acc);transform:scale(1.06);}
 
 .task-toolbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;}
 .srch{position:relative;display:flex;align-items:center;}
@@ -465,7 +466,7 @@ tr.sub-add-row td{background:rgba(124,111,232,0.03);}
 <!-- HEADER -->
 <header>
   <div class="logo-block">
-    <div class="logo-name" id="logoName">Shaun's Personal Dashboard <span style="font-size:11px;color:var(--muted);font-weight:400">v3.11a</span></div>
+    <div class="logo-name" id="logoName">Shaun's Personal Dashboard <span style="font-size:11px;color:var(--muted);font-weight:400">v3.11b</span></div>
     <div class="logo-sub" id="logoSub">Get Shit Done</div>
   </div>
   <div class="hdr-right">
@@ -1191,15 +1192,14 @@ async function loadFromSupabase(){
       sb.query('cfg').catch(()=>null),
     ]);
 
-    // Projects
+    // Projects — always trust Supabase when it has data
     if(sbProjects !== null){
-      if(sbProjects.length === 0){
-        // Seed projects
+      if(sbProjects.length === 0 && !ls.get('gsd_sb_seeded', false)){
         const projData = projects.map((name,i)=>({name,position:i}));
         await sb.insert('projects', projData);
         const fresh = await sb.query('projects','*','position.asc');
         projects = fresh.map(p=>p.name);
-      } else {
+      } else if(sbProjects.length > 0){
         projects = sbProjects.map(p=>p.name);
       }
       ls.set('gsd_proj', projects);
@@ -1207,8 +1207,8 @@ async function loadFromSupabase(){
 
     // Tasks
     if(sbTasks !== null){
-      if(sbTasks.length === 0){
-        // Seed with sample tasks
+      if(sbTasks.length === 0 && !ls.get('gsd_sb_seeded', false)){
+        // Only seed on very first ever load (never seeded before)
         const seedT = seedTasksList();
         const taskRows = seedT.map(t=>({
           title:t.task, project_name:t.project||null, notes:t.note||'', status:t.status,
@@ -1219,13 +1219,17 @@ async function loadFromSupabase(){
           position:t.id
         }));
         await sb.insert('tasks', taskRows);
+        ls.set('gsd_sb_seeded', true);
         const fresh = await sb.query('tasks','*','created_at.asc');
         tasks = mapTasksFromSB(fresh);
         resolveParentIds(tasks);
-      } else {
+      } else if(sbTasks.length > 0){
+        // Always use Supabase as source of truth when it has data
         tasks = mapTasksFromSB(sbTasks);
         resolveParentIds(tasks);
+        ls.set('gsd_sb_seeded', true);
       }
+      // If sbTasks.length === 0 AND already seeded before: keep existing tasks in memory, don't overwrite
       ls.set('gsd_tasks', tasks);
       taskSeq = tasks.reduce((m,t)=>Math.max(m,t.id||0),200)+1;
     }
@@ -1240,15 +1244,15 @@ async function loadFromSupabase(){
       ls.set('gsd_notes', notes);
     }
 
-    // Affirmations — stored flat, rebuild into pools
+    // Affirmations
     if(sbAffs !== null){
-      if(sbAffs.length === 0){
+      if(sbAffs.length === 0 && !ls.get('gsd_sb_seeded', false)){
         const seeded = seedAffs();
         const seedRows = (seeded.main?.items||[]).map(item=>({text:item.text,pool:'Affirmations',categories:[],favorited:item.liked||false}));
         await sb.insert('affirmations', seedRows);
         const fresh = await sb.query('affirmations','*','created_at.asc');
         affPools = mapAffirmationsFromSB(fresh);
-      } else {
+      } else if(sbAffs.length > 0){
         affPools = mapAffirmationsFromSB(sbAffs);
       }
       ls.set('gsd_affs', affPools);
@@ -1256,12 +1260,12 @@ async function loadFromSupabase(){
 
     // Quotes
     if(sbQuotes !== null){
-      if(sbQuotes.length === 0){
+      if(sbQuotes.length === 0 && !ls.get('gsd_sb_seeded', false)){
         const seedQ = seedQuotesList();
         await sb.insert('quotes', seedQ);
         const fresh = await sb.query('quotes','*','created_at.asc');
         quotes = mapQuotesFromSB(fresh);
-      } else {
+      } else if(sbQuotes.length > 0){
         quotes = mapQuotesFromSB(sbQuotes);
       }
       ls.set('gsd_quotes', quotes);
@@ -1867,7 +1871,8 @@ function renderProjTabs(){
   const el=document.getElementById('projTabs');if(!el)return;
   const topLevel=tasks.filter(t=>!t.parentId);
   el.innerHTML=`<button class="ptab${activeProjTab==='All'?' active':''}" onclick="setProjTab('All')">All <span class="nbadge">${topLevel.filter(t=>t.status!=='Complete').length}</span></button>`
-    +projects.map(p=>`<button class="ptab${activeProjTab===p?' active':''}" onclick="setProjTab('${esc(p).replace(/'/g,"\\'")}')">
+    +projects.map(p=>`<button class="ptab${activeProjTab===p?' active':''}" onclick="setProjTab('${esc(p).replace(/'/g,"\\'")}')"
+      ondragover="projTabDragOver(event,this)" ondragleave="projTabDragLeave(this)" ondrop="projTabDrop(event,'${esc(p).replace(/'/g,"\\'")}',this)">
       ${esc(p)} <span class="nbadge">${topLevel.filter(t=>t.project===p&&t.status!=='Complete').length}</span>
     </button>`).join('')
     +`<button class="ptab-add" onclick="goPage('settings',document.querySelector('.nav-tab[data-page=settings]'))">＋ Project</button>`;
@@ -1913,7 +1918,7 @@ function taskTableRow(t, tod, isSubtask=false){
     :`<td class="ctask editable td-task" onclick="inlineEdit(${t.id},'task',this)" title="${esc(t.task)}">${esc(t.task)}${subCountBadge}</td>`;
 
   const rowClass=(isSubtask?'sub-row':'')+(isDone?' row-done':'');
-  return`<tr class="${rowClass}" data-id="${t.id}">
+  return`<tr class="${rowClass}" data-id="${t.id}" draggable="true" ondragstart="taskRowDragStart(event,${t.id})" ondragend="taskRowDragEnd(event)">
     <td class="cck"><input type="checkbox" class="done-cb" ${isDone?'checked':''} onchange="toggleDone(${t.id},this)"></td>
     <td class="cid"><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">#${t.id}</span></td>
     ${expandCell}
@@ -2539,7 +2544,7 @@ function saveIdentity(){
   cfg.user=document.getElementById('setUser').value.trim()||'';
   cfg.birth=document.getElementById('setBirth').value||'';
   saveCfg();
-  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name)} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.11a</span>`;
+  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name)} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.11b</span>`;
   alert('Saved!');
 }
 function saveApiKey(){cfg.apiKey=document.getElementById('setApiKey').value.trim();saveCfg();alert('API key saved.');}
@@ -2688,6 +2693,55 @@ function tagSuggestKeyNav(e,inp){
 function rteCmd(cmd){document.getElementById('stickyBodyIn').focus();document.execCommand(cmd,false,null);}
 
 // ══════════════════════════════════════════════════
+// TASK ROW → PROJECT TAB DRAG
+// ══════════════════════════════════════════════════
+let _taskDragId = null;
+
+function taskRowDragStart(e, id){
+  _taskDragId = id;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', String(id));
+  // Dim the row slightly
+  setTimeout(()=>{ const el=document.querySelector(`tr[data-id="${id}"]`); if(el) el.style.opacity='.4'; }, 0);
+}
+
+function taskRowDragEnd(e){
+  _taskDragId = null;
+  // Restore all rows
+  document.querySelectorAll('#taskTbody tr').forEach(r=>r.style.opacity='');
+  // Clean up any lingering drag-over state on tabs
+  document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('drag-over'));
+}
+
+function projTabDragOver(e, btn){
+  if(_taskDragId === null) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  btn.classList.add('drag-over');
+}
+
+function projTabDragLeave(btn){
+  btn.classList.remove('drag-over');
+}
+
+function projTabDrop(e, projName, btn){
+  e.preventDefault();
+  btn.classList.remove('drag-over');
+  if(_taskDragId === null) return;
+  const id = _taskDragId;
+  _taskDragId = null;
+  const t = tasks.find(x => x.id === id);
+  if(!t || t.project === projName) return;
+  pushUndo();
+  t.project = projName;
+  // Also reassign any subtasks
+  tasks.filter(s => s.parentId === t.id).forEach(s => s.project = projName);
+  saveTasks();
+  renderTasks();
+  renderHome();
+}
+
+// ══════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════
 async function init(){
@@ -2695,7 +2749,7 @@ async function init(){
   document.documentElement.dataset.theme=cfg.theme||'dark';
   document.documentElement.dataset.palette=cfg.palette||'amethyst';
   document.getElementById('themeBtn').textContent=(cfg.theme||'dark')==='light'?'🌙 Dark':'☀ Light';
-  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name||"Shaun's Personal Dashboard")} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.11a</span>`;
+  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name||"Shaun's Personal Dashboard")} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.11b</span>`;
   applyAppearance();
 
   document.getElementById('maDate').value=today();
