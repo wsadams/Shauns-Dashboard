@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Shaun's Personal Dashboard v3.12</title>
+<title>Shaun's Personal Dashboard v3.12a</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Inter:wght@300;400;500;600&family=Nunito:wght@300;400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /* ── PALETTE ACCENTS ─────────────────────────────── */
@@ -473,7 +473,7 @@ tr.sub-add-row td{background:rgba(124,111,232,0.03);}
 <!-- HEADER -->
 <header>
   <div class="logo-block">
-    <div class="logo-name" id="logoName">Shaun's Personal Dashboard <span style="font-size:11px;color:var(--muted);font-weight:400">v3.12</span></div>
+    <div class="logo-name" id="logoName">Shaun's Personal Dashboard <span style="font-size:11px;color:var(--muted);font-weight:400">v3.12a</span></div>
     <div class="logo-sub" id="logoSub">Get Shit Done</div>
   </div>
   <div class="hdr-right">
@@ -526,7 +526,7 @@ tr.sub-add-row td{background:rgba(124,111,232,0.03);}
       <div id="homeTmrwList" ondragover="homeCardDragOver(event)" ondragleave="homeCardDragLeave(event)" ondrop="homeCardDrop(event,'tomorrow')" style="min-height:30px;border-radius:7px;transition:box-shadow .15s"><p style="font-size:12px;color:var(--muted)">Flag tasks with "M" in the Workflow tab.</p></div>
     </div>
     <div class="card">
-      <div class="card-title">🎯 Today's Intentions
+      <div class="card-title"><span id="homeIntentionsTitle">🎯 Today's Intentions</span>
         <button class="btn btn-ghost btn-xs" onclick="goPage('intentions',document.querySelectorAll('.nav-tab')[4])">Manage</button>
       </div>
       <div id="homeIntentions"><p style="font-size:12px;color:var(--muted)">No intentions set. Visit the Intentions tab.</p></div>
@@ -540,7 +540,7 @@ tr.sub-add-row td{background:rgba(124,111,232,0.03);}
     <div class="card">
       <div class="card-title">✅ Completed Today
         <div style="display:flex;gap:5px;align-items:center">
-          <input type="date" id="maDate" style="padding:3px 8px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:11px;outline:none" onchange="renderCompletedToday()">
+          <input type="date" id="maDate" style="padding:3px 8px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:11px;outline:none" onchange="renderCompletedToday();renderHomeIntentions();">
           <button class="btn btn-ghost btn-xs" onclick="setMaToday()">Today</button>
         </div>
       </div>
@@ -1393,7 +1393,7 @@ function mapAffirmationsFromSB(rows){
 function mapQuotesFromSB(rows){
   return rows.map(q=>({
     id: q.id,
-    _isFromSB: true,  // marks this as an existing SB record — never re-insert
+    _isFromSB: true,
     text: q.text,
     author: q.author||'',
     liked: q.favorited||false,
@@ -1539,10 +1539,12 @@ async function saveQuotes(){
 }
 
 async function deleteQuoteFromSB(q){
-  if(q._isFromSB && q.id){
+  // Attempt delete if we have any id that looks like a UUID (from SB)
+  const id = q.id;
+  if(id && typeof id === 'string' && id.includes('-')){
     setSyncStatus('saving');
-    try { await sb.delete('quotes', q.id); setSyncStatus('synced'); flashSaved(); }
-    catch(e){ console.error(e); setSyncStatus('error'); }
+    try { await sb.delete('quotes', id); setSyncStatus('synced'); flashSaved(); }
+    catch(e){ console.error('deleteQuote SB:', e); setSyncStatus('error'); }
   }
 }
 
@@ -1551,7 +1553,7 @@ async function saveIntentions(){
   setSyncStatus('saving');
   try {
     for(const i of intentions){
-      const row = {text:i.text, checked:i.done||false, date:i.created?i.created.slice(0,10):today()};
+      const row = {text:i.text, checked:i.done||false};
       if(!i._sbid){
         const ins = await sb.insert('intentions',[row]);
         if(ins[0]) i._sbid = ins[0].id;
@@ -1864,13 +1866,7 @@ function renderHome(){
     ?tmrwTasks.map(t=>taskRow(t,'tomorrow')).join('')
     :`<p style="font-size:12px;color:var(--muted)">No tasks flagged for tomorrow.</p>`;
 
-  const todayInts=intentions.filter(i=>{
-    if(i.done){const cleared=i.doneAt&&new Date(i.doneAt)<new Date(new Date().toDateString());return!cleared;}
-    return true;
-  });
-  document.getElementById('homeIntentions').innerHTML=todayInts.length
-    ?todayInts.map(i=>`<div class="int-row"><input type="checkbox" class="int-cb" ${i.done?'checked':''} onchange="toggleIntHome('${i._sbid||i.id}',this)" style="width:14px;height:14px;cursor:pointer;accent-color:var(--acc);flex-shrink:0"><span class="int-text${i.done?' done':''}">${esc(i.text)}</span></div>`).join('')
-    :`<p style="font-size:12px;color:var(--muted)">No intentions set for today.</p>`;
+  renderHomeIntentions();
 
   const blockEl=document.getElementById('homeBlockers');
   if(!blocked.length){blockEl.innerHTML=`<p style="font-size:12px;color:var(--muted)">No blockers.</p>`;}
@@ -1900,7 +1896,40 @@ function taskRow(t, section){
   </div>`;
 }
 
-function setMaToday(){document.getElementById('maDate').value=effectiveToday();renderCompletedToday();}
+function renderHomeIntentions(){
+  const d=document.getElementById('maDate')?.value||effectiveToday();
+  const isToday=(d===effectiveToday());
+  // Update card title to reflect selected date
+  const titleEl=document.getElementById('homeIntentionsTitle');
+  if(titleEl) titleEl.textContent=isToday?'🎯 Today\'s Intentions':`🎯 Intentions — ${fmt(d)}`;
+  let intsForDate;
+  if(isToday){
+    // Today: show undone + done-today (not yet cleared)
+    intsForDate=intentions.filter(i=>{
+      if(i.done){
+        const cleared=i.doneAt&&new Date(i.doneAt)<new Date(new Date().toDateString());
+        return !cleared;
+      }
+      return true;
+    });
+  } else {
+    // Past date: show intentions that were completed on that date
+    intsForDate=intentions.filter(i=>i.doneAt&&i.doneAt.slice(0,10)===d);
+    if(!intsForDate.length){
+      // Also show intentions created on that date (even if not done)
+      intsForDate=intentions.filter(i=>i.created&&i.created.slice(0,10)===d);
+    }
+  }
+  document.getElementById('homeIntentions').innerHTML=intsForDate.length
+    ?intsForDate.map(i=>`<div class="int-row">
+        ${isToday?`<input type="checkbox" class="int-cb" ${i.done?'checked':''} onchange="toggleIntHome('${i._sbid||i.id}',this)" style="width:14px;height:14px;cursor:pointer;accent-color:var(--acc);flex-shrink:0">`:'<span style="color:var(--acc2);font-size:12px;flex-shrink:0">'+(i.done?'✓':'○')+'</span>'}
+        <span class="int-text${i.done?' done':''}">${esc(i.text)}</span>
+        ${!isToday&&i.doneAt?`<span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;flex-shrink:0">${new Date(i.doneAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>`:''}
+      </div>`).join('')
+    :`<p style="font-size:12px;color:var(--muted)">${isToday?"No intentions set for today.":"No intentions recorded for this date."}</p>`;
+}
+
+function setMaToday(){document.getElementById('maDate').value=effectiveToday();renderCompletedToday();renderHomeIntentions();}
 function renderCompletedToday(){
   const d=document.getElementById('maDate')?.value||effectiveToday();
   const done=tasks.filter(t=>t.completedAt&&t.completedAt.slice(0,10)===d);
@@ -2533,7 +2562,7 @@ function saveAffInline(idx,el){
 }
 function toggleAffLike(idx){affPools.main.items[idx].liked=!affPools.main.items[idx].liked;saveAffs();renderAffPage();}
 function addAff(){
-  const el=document.getElementById('affIn_main');const text=el?.value.trim();if(!text)return;
+  const el=document.getElementById('affIn_main');if(!el)return;const text=el.value.trim();if(!text)return;
   if(!affPools.main)affPools.main={name:'Affirmations',items:[]};
   affPools.main.items.push({text,liked:false,_sbid:null});
   saveAffs();el.value='';renderAffPage();
@@ -2550,7 +2579,7 @@ function deleteAff(idx){
 let intSeq = ls.get('gsd_iseq', 1);
 
 function addIntention(){
-  const text=document.getElementById('intInput').value.trim();if(!text)return;
+  const text=document.getElementById('intInput')?.value.trim();if(!text)return;
   pushUndo();
   const newInt={id:intSeq++,_sbid:null,text,done:false,doneAt:null,created:new Date().toISOString()};
   intentions.push(newInt);
@@ -2585,10 +2614,26 @@ function renderIntentions(){
   el.innerHTML=intentions.map(i=>`
     <div class="int-list-row">
       <input type="checkbox" class="int-cb2" ${i.done?'checked':''} onchange="toggleInt(${i.id},this)">
-      <span class="int-txt${i.done?' done':''}">${esc(i.text)}</span>
+      <span class="int-txt${i.done?' done':''}"
+        contenteditable="${i.done?'false':'true'}"
+        spellcheck="false"
+        style="flex:1;outline:none;border-radius:4px;padding:1px 3px;cursor:${i.done?'default':'text'}"
+        onfocus="this.style.background='var(--bg4)';this.style.outline='1px solid var(--acc)'"
+        onblur="this.style.background='';this.style.outline='';saveIntInline(${i.id},this)"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+      >${esc(i.text)}</span>
       <span class="int-date">${new Date(i.created).toLocaleDateString()}</span>
       <button class="int-del" onclick="deleteInt(${i.id})">✕</button>
     </div>`).join('');
+}
+
+function saveIntInline(id, el){
+  const text=el.textContent.trim();
+  const i=intentions.find(x=>x.id===id);if(!i)return;
+  if(!text){el.textContent=i.text;return;}
+  if(text===i.text)return;
+  i.text=text;
+  saveIntentions();
 }
 
 // ══════════════════════════════════════════════════
@@ -2604,7 +2649,7 @@ function addQuote(){
 function deleteQuote(id){
   if(!confirm('Delete?'))return;
   const q=quotes.find(x=>String(x.id)===String(id));
-  quotes=quotes.filter(q=>String(q.id)!==String(id));
+  quotes=quotes.filter(x=>String(x.id)!==String(id));
   if(q) deleteQuoteFromSB(q);
   ls.set('gsd_quotes',quotes);renderQuotesList();
 }
@@ -2715,7 +2760,7 @@ function saveIdentity(){
   cfg.user=document.getElementById('setUser').value.trim()||'';
   cfg.birth=document.getElementById('setBirth').value||'';
   saveCfg();
-  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name)} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.12</span>`;
+  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name)} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.12a</span>`;
   alert('Saved!');
 }
 function saveApiKey(){cfg.apiKey=document.getElementById('setApiKey').value.trim();saveCfg();alert('API key saved.');}
@@ -2936,7 +2981,7 @@ async function init(){
   document.documentElement.dataset.theme=cfg.theme||'dark';
   document.documentElement.dataset.palette=cfg.palette||'amethyst';
   document.getElementById('themeBtn').textContent=(cfg.theme||'dark')==='light'?'🌙 Dark':'☀ Light';
-  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name||"Shaun's Personal Dashboard")} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.12</span>`;
+  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name||"Shaun's Personal Dashboard")} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.12a</span>`;
   applyAppearance();
 
   document.getElementById('maDate').value=effectiveToday();
