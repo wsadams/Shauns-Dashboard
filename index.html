@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Shaun's Personal Dashboard v3.11c</title>
+<title>Shaun's Personal Dashboard v3.11d</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Inter:wght@300;400;500;600&family=Nunito:wght@300;400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /* ── PALETTE ACCENTS ─────────────────────────────── */
@@ -466,7 +466,7 @@ tr.sub-add-row td{background:rgba(124,111,232,0.03);}
 <!-- HEADER -->
 <header>
   <div class="logo-block">
-    <div class="logo-name" id="logoName">Shaun's Personal Dashboard <span style="font-size:11px;color:var(--muted);font-weight:400">v3.11c</span></div>
+    <div class="logo-name" id="logoName">Shaun's Personal Dashboard <span style="font-size:11px;color:var(--muted);font-weight:400">v3.11d</span></div>
     <div class="logo-sub" id="logoSub">Get Shit Done</div>
   </div>
   <div class="hdr-right">
@@ -1351,6 +1351,7 @@ function mapAffirmationsFromSB(rows){
 function mapQuotesFromSB(rows){
   return rows.map(q=>({
     id: q.id,
+    _isFromSB: true,  // marks this as an existing SB record — never re-insert
     text: q.text,
     author: q.author||'',
     liked: q.favorited||false,
@@ -1416,17 +1417,17 @@ async function saveNotes(){
   ls.set('gsd_notes', notes);
   setSyncStatus('saving');
   try {
-    let didInsert = false;
     for(const n of notes){
-      if(!n._sbid){
-        const inserted = await sb.insert('notes',[{title:n.title,content:n.body,color:n.color,position_x:n.x,position_y:n.y}]);
-        if(inserted[0]){ n._sbid = inserted[0].id; didInsert = true; }
-      } else {
+      if(n._sbid){
+        // Known SB record — update only
         await sb.update('notes', n._sbid, {title:n.title,content:n.body,color:n.color,position_x:n.x,position_y:n.y});
+      } else {
+        // Truly new note (just created this session) — insert once
+        const inserted = await sb.insert('notes',[{title:n.title,content:n.body,color:n.color,position_x:n.x,position_y:n.y}]);
+        if(inserted[0]){ n._sbid = inserted[0].id; }
       }
     }
-    // Re-save to localStorage after inserts so _sbid values persist across reloads
-    if(didInsert) ls.set('gsd_notes', notes);
+    ls.set('gsd_notes', notes); // always persist _sbid
     setSyncStatus('synced'); flashSaved();
   } catch(e){ console.error(e); setSyncStatus('error'); }
 }
@@ -1470,14 +1471,16 @@ async function saveQuotes(){
   try {
     for(const q of quotes){
       const row = {text:q.text, author:q.author||'', categories:q.cats||[], favorited:q.liked||false};
-      if(typeof q.id === 'string' || !q._isFromSB){
-        // New quote (local id via Date.now())
+      if(q._isFromSB && q.id){
+        // Known SB record — update only
+        await sb.update('quotes', q.id, row);
+      } else if(!q._isFromSB){
+        // Truly new quote — insert once
         const ins = await sb.insert('quotes',[row]);
         if(ins[0]){ q.id = ins[0].id; q._isFromSB = true; }
-      } else {
-        await sb.update('quotes', q.id, row);
       }
     }
+    ls.set('gsd_quotes', quotes); // always persist _isFromSB
     setSyncStatus('synced'); flashSaved();
   } catch(e){ console.error(e); setSyncStatus('error'); }
 }
@@ -2303,8 +2306,20 @@ function makeDrag(el,note,board){
     const up=()=>{
       el.classList.remove('grabbing');el.style.zIndex='';
       document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
-      if(moved){note.x=parseInt(el.style.left);note.y=parseInt(el.style.top);saveNotes();
-        const my=notes.reduce((m,n)=>Math.max(m,(n.y||0)+220),600);board.style.minHeight=my+'px';}
+      if(moved){
+        // Update position on the live notes array object (find by id, not closure ref)
+        const live=notes.find(x=>String(x.id)===String(note.id)||x._sbid===note._sbid);
+        const nx=parseInt(el.style.left);const ny=parseInt(el.style.top);
+        if(live){live.x=nx;live.y=ny;}
+        note.x=nx;note.y=ny;
+        // Only save position if we have a valid SB reference — never insert on drag
+        if(note._sbid){
+          ls.set('gsd_notes',notes);
+          setSyncStatus('saving');
+          sb.update('notes',note._sbid,{position_x:nx,position_y:ny}).then(()=>{setSyncStatus('synced');}).catch(e=>setSyncStatus('error'));
+        }
+        const my=notes.reduce((m,n)=>Math.max(m,(n.y||0)+220),600);board.style.minHeight=my+'px';
+      }
     };
     document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
   });
@@ -2415,6 +2430,38 @@ function deleteAff(idx){
 }
 
 // INTENTIONS
+let intSeq = ls.get('gsd_iseq', 1);
+
+function addIntention(){
+  const text=document.getElementById('intInput').value.trim();if(!text)return;
+  pushUndo();
+  const newInt={id:intSeq++,_sbid:null,text,done:false,doneAt:null,created:new Date().toISOString()};
+  intentions.push(newInt);
+  ls.set('gsd_iseq',intSeq);
+  document.getElementById('intInput').value='';
+  saveIntentions();renderIntentions();renderHome();
+}
+
+function toggleIntHome(id,cb){
+  const i=intentions.find(x=>String(x._sbid||x.id)===String(id));if(!i)return;
+  i.done=cb.checked;i.doneAt=cb.checked?new Date().toISOString():null;
+  saveIntentions();renderHome();
+}
+
+function toggleInt(id,cb){
+  const i=intentions.find(x=>x.id===id);if(!i)return;
+  pushUndo();i.done=cb.checked;i.doneAt=cb.checked?new Date().toISOString():null;
+  saveIntentions();renderIntentions();renderHome();
+}
+
+function deleteInt(id){
+  if(!confirm('Delete?'))return;pushUndo();
+  const i=intentions.find(x=>x.id===id);
+  intentions=intentions.filter(x=>x.id!==id);
+  if(i) deleteIntentionFromSB(i);
+  ls.set('gsd_ints',intentions);renderIntentions();renderHome();
+}
+
 function renderIntentions(){
   const el=document.getElementById('intList');if(!el)return;
   if(!intentions.length){el.innerHTML=`<p style="font-size:13px;color:var(--muted)">No intentions yet. Set one above.</p>`;return;}
@@ -2434,7 +2481,7 @@ var quotePage=0;const QUOTE_PAGE_SIZE=15;
 
 function addQuote(){
   const t=document.getElementById('newQText').value.trim();const a=document.getElementById('newQAuthor').value.trim();if(!t)return;
-  quotes.push({id:Date.now(),text:t,author:a,liked:false,_isFromSB:false});
+  quotes.push({id:null,text:t,author:a,liked:false,_isFromSB:false});
   saveQuotes();document.getElementById('newQText').value='';document.getElementById('newQAuthor').value='';renderQuotesList();
 }
 function deleteQuote(id){
@@ -2551,7 +2598,7 @@ function saveIdentity(){
   cfg.user=document.getElementById('setUser').value.trim()||'';
   cfg.birth=document.getElementById('setBirth').value||'';
   saveCfg();
-  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name)} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.11c</span>`;
+  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name)} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.11d</span>`;
   alert('Saved!');
 }
 function saveApiKey(){cfg.apiKey=document.getElementById('setApiKey').value.trim();saveCfg();alert('API key saved.');}
@@ -2756,7 +2803,7 @@ async function init(){
   document.documentElement.dataset.theme=cfg.theme||'dark';
   document.documentElement.dataset.palette=cfg.palette||'amethyst';
   document.getElementById('themeBtn').textContent=(cfg.theme||'dark')==='light'?'🌙 Dark':'☀ Light';
-  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name||"Shaun's Personal Dashboard")} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.11c</span>`;
+  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name||"Shaun's Personal Dashboard")} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.11d</span>`;
   applyAppearance();
 
   document.getElementById('maDate').value=today();
