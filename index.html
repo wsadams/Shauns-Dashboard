@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Shaun's Personal Dashboard v3.12c</title>
+<title>Shaun's Personal Dashboard v3.12d</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Inter:wght@300;400;500;600&family=Nunito:wght@300;400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /* ── PALETTE ACCENTS ─────────────────────────────── */
@@ -473,7 +473,7 @@ tr.sub-add-row td{background:rgba(124,111,232,0.03);}
 <!-- HEADER -->
 <header>
   <div class="logo-block">
-    <div class="logo-name" id="logoName">Shaun's Personal Dashboard <span style="font-size:11px;color:var(--muted);font-weight:400">v3.12c</span></div>
+    <div class="logo-name" id="logoName">Shaun's Personal Dashboard <span style="font-size:11px;color:var(--muted);font-weight:400">v3.12d</span></div>
     <div class="logo-sub" id="logoSub">Get Shit Done</div>
   </div>
   <div class="hdr-right">
@@ -1061,19 +1061,25 @@ const ls={
   get:(k,d)=>{try{const v=localStorage.getItem(k);return v!==null?JSON.parse(v):d;}catch{return d;}},
   set:(k,v)=>localStorage.setItem(k,JSON.stringify(v))
 };
-const today=()=>new Date().toISOString().slice(0,10);
-// effectiveToday() returns the "logical" date accounting for day-rollover hour
-// e.g. if rollover=3, tasks completed before 3am still count as "yesterday"
+// Local date string — uses YOUR timezone, not UTC
+function localDateStr(d){
+  const dt = d || new Date();
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth()+1).padStart(2,'0');
+  const day = String(dt.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+const today=()=>localDateStr();
+// effectiveToday() — before the rollover hour, still count as the previous local day
 function effectiveToday(){
   const rollover = parseInt(cfg.dayRollover ?? 3);
   const now = new Date();
   if(now.getHours() < rollover){
-    // Before rollover — treat as previous calendar day
     const prev = new Date(now);
     prev.setDate(prev.getDate() - 1);
-    return prev.toISOString().slice(0,10);
+    return localDateStr(prev);
   }
-  return now.toISOString().slice(0,10);
+  return localDateStr();
 }
 const fmt=d=>{if(!d)return'';const p=d.split('-');return`${p[1]}/${p[2]}/${p[0].slice(2)}`;};
 
@@ -1846,7 +1852,7 @@ function homeCardDrop(e,sec){
 // ══════════════════════════════════════════════════
 function renderHome(){
   const active=tasks.filter(t=>t.status!=='Complete'&&!t.parentId);
-  const doneToday=tasks.filter(t=>t.completedAt&&t.completedAt.slice(0,10)===effectiveToday());
+  const doneToday=tasks.filter(t=>t.completedAt&&localDateStr(new Date(t.completedAt))===effectiveToday());
   const overdue=tasks.filter(t=>t.dueDate&&t.status!=='Complete'&&t.dueDate<effectiveToday());
   const blocked=tasks.filter(t=>t.blockedBy&&String(t.blockedBy).trim()!==''&&t.status!=='Complete');
 
@@ -1935,7 +1941,7 @@ function renderHomeIntentions(){
 function setMaToday(){document.getElementById('maDate').value=effectiveToday();renderCompletedToday();renderHomeIntentions();}
 function renderCompletedToday(){
   const d=document.getElementById('maDate')?.value||effectiveToday();
-  const done=tasks.filter(t=>t.completedAt&&t.completedAt.slice(0,10)===d);
+  const done=tasks.filter(t=>t.completedAt&&localDateStr(new Date(t.completedAt))===d);
   const el=document.getElementById('massiveActions');
   const inner=done.length
     ?done.map(t=>`<div class="ct-row" draggable="true"
@@ -2120,7 +2126,7 @@ function getFiltered(){
   const tod=today();
   return tasks.filter(t=>{
     if(t.parentId) return false; // subtasks rendered inline under parent
-    if(t.status==='Complete'){const completedToday=t.completedAt&&t.completedAt.slice(0,10)===effectiveToday();if(!completedToday&&!showD)return false;}
+    if(t.status==='Complete'){const completedToday=t.completedAt&&localDateStr(new Date(t.completedAt))===effectiveToday();if(!completedToday&&!showD)return false;}
     if(activeProjTab!=='All'&&t.project!==activeProjTab)return false;
     if(q&&!(t.task||'').toLowerCase().includes(q)&&!(t.tags||[]).join(' ').includes(q))return false;
     if(fs&&t.status!==fs)return false;
@@ -2344,7 +2350,7 @@ function kbDrop(e){
 function setCompToday(){document.getElementById('compDate').value=effectiveToday();renderCompSection();}
 function renderCompSection(){
   const d=document.getElementById('compDate')?.value||today();
-  const done=tasks.filter(t=>t.completedAt&&t.completedAt.slice(0,10)===d);
+  const done=tasks.filter(t=>t.completedAt&&localDateStr(new Date(t.completedAt))===d);
   document.getElementById('compList').innerHTML=done.length
     ?done.map(t=>`<div class="ma-row"><span class="ma-check">✓</span><span class="ma-name">${esc(t.task)}</span><span style="font-size:11px;color:var(--muted);margin-left:auto">${esc(t.project)}</span><span class="ma-time">${new Date(t.completedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span></div>`).join('')
     :`<p style="font-size:12px;color:var(--muted)">Nothing completed on ${d}.</p>`;
@@ -2773,7 +2779,7 @@ function saveIdentity(){
   cfg.user=document.getElementById('setUser').value.trim()||'';
   cfg.birth=document.getElementById('setBirth').value||'';
   saveCfg();
-  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name)} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.12c</span>`;
+  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name)} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.12d</span>`;
   alert('Saved!');
 }
 function saveApiKey(){cfg.apiKey=document.getElementById('setApiKey').value.trim();saveCfg();alert('API key saved.');}
@@ -2842,7 +2848,7 @@ async function saveProjRename(){
 // SANITATION
 function sanitizeAll(){if(!confirm('Delete ALL completed tasks permanently?'))return;tasks=tasks.filter(t=>t.status!=='Complete');saveTasks();renderTasks();renderHome();alert('Done.');}
 function sanitizeIntentions(){if(!confirm('Delete all completed intentions?'))return;intentions=intentions.filter(i=>!i.done);saveIntentions();renderIntentions();renderHome();alert('Done.');}
-function sanitizeBefore(){const d=document.getElementById('sanDate').value;if(!d)return alert('Pick a date.');if(!confirm(`Delete completed tasks before ${d}?`))return;tasks=tasks.filter(t=>!(t.status==='Complete'&&t.completedAt&&t.completedAt.slice(0,10)<d));saveTasks();renderTasks();renderHome();alert('Done.');}
+function sanitizeBefore(){const d=document.getElementById('sanDate').value;if(!d)return alert('Pick a date.');if(!confirm(`Delete completed tasks before ${d}?`))return;tasks=tasks.filter(t=>!(t.status==='Complete'&&t.completedAt&&localDateStr(new Date(t.completedAt))<d));saveTasks();renderTasks();renderHome();alert('Done.');}
 
 // IMPORT / EXPORT
 function exportData(){
@@ -3005,7 +3011,7 @@ async function init(){
   document.documentElement.dataset.theme=cfg.theme||'dark';
   document.documentElement.dataset.palette=cfg.palette||'amethyst';
   document.getElementById('themeBtn').textContent=(cfg.theme||'dark')==='light'?'🌙 Dark':'☀ Light';
-  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name||"Shaun's Personal Dashboard")} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.12c</span>`;
+  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name||"Shaun's Personal Dashboard")} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.12d</span>`;
   applyAppearance();
 
   document.getElementById('maDate').value=effectiveToday();
