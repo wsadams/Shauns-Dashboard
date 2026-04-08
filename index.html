@@ -27,7 +27,7 @@
   --logo-name-size:19px;
   --logo-sub-size:10px;
   --header-padding-h:22px;
-  --header-padding-v:0px;
+  --logo-padding-v:10px;
   --main-padding:18px 22px;
 }
 [data-palette="blue"]    {--acc:#4F80E8;--acc2:#82AAFF;--acc3:rgba(79,128,232,0.13);--acc-b:rgba(79,128,232,0.3);}
@@ -61,12 +61,12 @@ p{font-size:var(--p-size);}
 ::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:99px;}
 
 /* ── HEADER ─────────────────────────────────────── */
+.header-wrap{position:sticky;top:0;z-index:300;}
 header{
-  height:62px;background:var(--custom-header-bg);border-bottom:2px solid var(--acc);
-  padding:var(--header-padding-v) var(--header-padding-h);display:flex;align-items:center;justify-content:space-between;
-  position:sticky;top:0;z-index:300;
+  min-height:62px;background:var(--custom-header-bg);border-bottom:2px solid var(--acc);
+  padding:0 var(--header-padding-h);display:flex;align-items:center;justify-content:space-between;
 }
-.logo-block{}
+.logo-block{padding:var(--logo-padding-v) 0;}
 .logo-name{font-family:var(--body-font);font-size:var(--logo-name-size);font-weight:600;color:#E8E0D0;letter-spacing:.5px;}
 .logo-sub{font-size:var(--logo-sub-size);color:var(--acc2);letter-spacing:2px;text-transform:uppercase;margin-top:1px;}
 .hdr-right{display:flex;align-items:center;gap:14px;}
@@ -87,7 +87,7 @@ header{
 .sync-label{font-size:10px;color:#5A6A80;font-family:'DM Mono',monospace;}
 
 /* ── NAV ────────────────────────────────────────── */
-.nav{background:var(--custom-header-bg);border-bottom:1px solid rgba(255,255,255,0.07);padding:0 22px;display:flex;overflow-x:auto;position:sticky;top:62px;z-index:290;}
+.nav{background:var(--custom-header-bg);border-bottom:1px solid rgba(255,255,255,0.07);padding:0 22px;display:flex;overflow-x:auto;}
 .nav-tab{padding:11px 15px;font-size:13px;font-weight:500;color:#6A7A90;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .14s;white-space:nowrap;font-family:var(--body-font);display:flex;align-items:center;gap:5px;}
 .nav-tab:hover{color:#C0D0E0;}
 .nav-tab.active{color:#E8E0D0;border-bottom-color:var(--acc);}
@@ -471,6 +471,7 @@ tr.sub-add-row td{background:rgba(124,111,232,0.03);}
 <div id="savedFlash">Saved</div>
 
 <!-- HEADER -->
+<div class="header-wrap">
 <header>
   <div class="logo-block">
     <div class="logo-name" id="logoName">Shaun's Personal Dashboard <span style="font-size:11px;color:var(--muted);font-weight:400">v3.12f</span></div>
@@ -494,7 +495,6 @@ tr.sub-add-row td{background:rgba(124,111,232,0.03);}
     </div>
   </div>
 </header>
-
 <!-- NAV -->
 <nav class="nav">
   <button class="nav-tab active" data-page="home" onclick="goPage('home',this)">Home</button>
@@ -506,6 +506,7 @@ tr.sub-add-row td{background:rgba(124,111,232,0.03);}
   <button class="nav-tab" data-page="iam" onclick="openIAM()">Screensaver</button>
   <button class="nav-tab" data-page="settings" onclick="goPage('settings',this)" style="display:none">Settings</button>
 </nav>
+</div>
 
 <main id="mainWrap">
 
@@ -825,10 +826,11 @@ tr.sub-add-row td{background:rgba(124,111,232,0.03);}
             <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:2px"><span>0</span><span>22</span><span>40</span><span>60</span></div>
           </div>
           <div class="field">
-            <label>Header Vertical Padding <span id="headerPadVVal" style="color:var(--acc2);font-weight:400;font-size:11px;margin-left:6px">0px</span></label>
-            <input type="range" id="headerPadVRange" min="0" max="24" step="2" value="0" oninput="setHeaderPadV(this.value)" style="width:100%;accent-color:var(--acc);margin-top:4px">
-            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:2px"><span>0</span><span>8</span><span>16</span><span>24</span></div>
+            <label>Header Title Vertical Padding <span id="logoPadVVal" style="color:var(--acc2);font-weight:400;font-size:11px;margin-left:6px">10px</span></label>
+            <input type="range" id="logoPadVRange" min="0" max="28" step="2" value="10" oninput="setLogoPadV(this.value)" style="width:100%;accent-color:var(--acc);margin-top:4px">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:2px"><span>0</span><span>10</span><span>20</span><span>28</span></div>
           </div>
+
           <div class="field">
             <label>Main Content Padding <span id="mainPadVal" style="color:var(--acc2);font-weight:400;font-size:11px;margin-left:6px">18px</span></label>
             <input type="range" id="mainPadRange" min="10" max="40" step="2" value="18" oninput="setMainPad(this.value)" style="width:100%;accent-color:var(--acc);margin-top:4px">
@@ -1593,7 +1595,7 @@ async function deleteIntentionFromSB(i){
 
 async function syncCfgToSupabase(){
   try {
-    const keys = ['name','user','birth','palette','theme','headerBg','bodyBg','cardBg','fontFamily','fontWeight','momentColor','momentSize','affPageSize','bodyFontSize','thNameSize','blockerNameSize','pSize','logoNameSize','logoSubSize','headerPad','mainPad','dayRollover','headerPadV'];
+    const keys = ['name','user','birth','palette','theme','headerBg','bodyBg','cardBg','fontFamily','fontWeight','momentColor','momentSize','affPageSize','bodyFontSize','thNameSize','blockerNameSize','pSize','logoNameSize','logoSubSize','headerPad','mainPad','dayRollover','logoPadV'];
     for(const k of keys){
       if(cfg[k] !== undefined) await sb.setCfg(k, cfg[k]);
     }
@@ -1666,7 +1668,7 @@ function applyAppearance(){
   r.setProperty('--logo-name-size', (cfg.logoNameSize||19)+'px');
   r.setProperty('--logo-sub-size', (cfg.logoSubSize||10)+'px');
   r.setProperty('--header-padding-h', (cfg.headerPad||22)+'px');
-  r.setProperty('--header-padding-v', (cfg.headerPadV||0)+'px');
+  r.setProperty('--logo-padding-v', (cfg.logoPadV||10)+'px');
   r.setProperty('--main-padding', `${cfg.mainPad||18}px 22px`);
 }
 
@@ -1709,6 +1711,7 @@ function setPSize(val){cfg.pSize=parseInt(val);saveCfg();document.getElementById
 function setLogoNameSize(val){cfg.logoNameSize=parseInt(val);saveCfg();document.getElementById('logoNameSizeVal').textContent=val+'px';applyAppearance();}
 function setLogoSubSize(val){cfg.logoSubSize=parseInt(val);saveCfg();document.getElementById('logoSubSizeVal').textContent=val+'px';applyAppearance();}
 function setHeaderPad(val){cfg.headerPad=parseInt(val);saveCfg();document.getElementById('headerPadVal').textContent=val+'px';applyAppearance();}
+function setLogoPadV(val){cfg.logoPadV=parseInt(val);saveCfg();document.getElementById('logoPadVVal').textContent=val+'px';applyAppearance();}
 function setHeaderPadV(val){cfg.headerPadV=parseInt(val);saveCfg();document.getElementById('headerPadVVal').textContent=val+'px';applyAppearance();}
 function setMainPad(val){cfg.mainPad=parseInt(val);saveCfg();document.getElementById('mainPadVal').textContent=val+'px';applyAppearance();}
 function setDayRollover(val){
@@ -1717,7 +1720,7 @@ function setDayRollover(val){
   document.getElementById('rolloverVal').textContent=h===0?'12:00 AM':`${h}:00 AM`;
 }
 function resetTypography(){
-  Object.assign(cfg,{bodyFontSize:14,thNameSize:13,blockerNameSize:12.5,pSize:13,logoNameSize:19,logoSubSize:10,headerPad:22,headerPadV:0,mainPad:18});
+  Object.assign(cfg,{bodyFontSize:14,thNameSize:13,blockerNameSize:12.5,pSize:13,logoNameSize:19,logoSubSize:10,headerPad:22,logoPadV:10,mainPad:18});
   saveCfg();renderSettings();applyAppearance();
 }
 
@@ -2781,7 +2784,7 @@ function renderSettings(){
   const lns=cfg.logoNameSize||19;document.getElementById('logoNameSizeRange').value=lns;document.getElementById('logoNameSizeVal').textContent=lns+'px';
   const lss=cfg.logoSubSize||10;document.getElementById('logoSubSizeRange').value=lss;document.getElementById('logoSubSizeVal').textContent=lss+'px';
   const hp=cfg.headerPad||22;document.getElementById('headerPadRange').value=hp;document.getElementById('headerPadVal').textContent=hp+'px';
-  const hpv=cfg.headerPadV||0;document.getElementById('headerPadVRange').value=hpv;document.getElementById('headerPadVVal').textContent=hpv+'px';
+  const lpv=cfg.logoPadV??10;document.getElementById('logoPadVRange').value=lpv;document.getElementById('logoPadVVal').textContent=lpv+'px';
   const mp=cfg.mainPad||18;document.getElementById('mainPadRange').value=mp;document.getElementById('mainPadVal').textContent=mp+'px';
   const ro=cfg.dayRollover??3;document.getElementById('rolloverRange').value=ro;
   document.getElementById('rolloverVal').textContent=ro===0?'12:00 AM':`${ro}:00 AM`;
