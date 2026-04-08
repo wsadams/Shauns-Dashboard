@@ -1933,17 +1933,17 @@ function renderHomeIntentions(){
     // Today: show undone + done-today (not yet cleared)
     intsForDate=intentions.filter(i=>{
       if(i.done){
-        const cleared=i.doneAt&&new Date(i.doneAt)<new Date(new Date().toDateString());
+        const cleared=i.doneAt&&localDateStr(new Date(i.doneAt))<effectiveToday();
         return !cleared;
       }
       return true;
     });
   } else {
     // Past date: show intentions that were completed on that date
-    intsForDate=intentions.filter(i=>i.doneAt&&i.doneAt.slice(0,10)===d);
+    intsForDate=intentions.filter(i=>i.doneAt&&localDateStr(new Date(i.doneAt))===d);
     if(!intsForDate.length){
       // Also show intentions created on that date (even if not done)
-      intsForDate=intentions.filter(i=>i.created&&i.created.slice(0,10)===d);
+      intsForDate=intentions.filter(i=>i.created&&localDateStr(new Date(i.created))===d);
     }
   }
   document.getElementById('homeIntentions').innerHTML=intsForDate.length
