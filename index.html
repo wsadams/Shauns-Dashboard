@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Shaun's Personal Dashboard v3.1.4</title>
+<title>Shaun's Personal Dashboard v3.1.5</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Inter:wght@300;400;500;600&family=Nunito:wght@300;400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /* ── PALETTE ACCENTS ─────────────────────────────── */
@@ -187,7 +187,7 @@ input[type=date]{color-scheme:dark;}
    HOME PAGE
 ══════════════════════════════════════════════════ */
 .home-top{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;}
-.home-mid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.home-mid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;}
 .home-bot{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 @media(max-width:960px){.home-top,.home-mid,.home-bot{grid-template-columns:1fr;}}
 
@@ -447,6 +447,22 @@ tr.sub-add-row td{background:rgba(124,111,232,0.03);}
 .proj-edit-row:last-child{border-bottom:none;}
 .proj-edit-name{flex:1;font-size:13px;}
 
+/* PRAYER rows */
+.prayer-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg3);border-radius:7px;border:1px solid var(--border);margin-bottom:5px;transition:border-color .15s;}
+.prayer-row:hover{border-color:var(--border2);}
+.prayer-cb{width:14px;height:14px;cursor:pointer;accent-color:var(--acc);flex-shrink:0;}
+.prayer-text{flex:1;font-size:var(--p-size);}
+.prayer-text.done{text-decoration:line-through;color:var(--muted);}
+.prayer-del{background:none;border:none;cursor:pointer;font-size:11px;color:rgba(200,70,70,.3);transition:color .13s;padding:2px 5px;border-radius:4px;}
+.prayer-del:hover{color:#D06060;}
+/* Active task focus */
+.th-row.focus-now{border-color:var(--acc)!important;background:var(--acc3)!important;box-shadow:0 0 0 1px var(--acc-b);}
+.th-row.focus-now .th-name{color:var(--acc2);font-weight:500;}
+.focus-btn{background:none;border:none;cursor:pointer;font-size:11px;color:var(--muted);padding:2px 5px;border-radius:4px;transition:all .13s;flex-shrink:0;}
+.focus-btn:hover{color:var(--acc2);background:var(--acc3);}
+.focus-btn.active{color:var(--acc2);background:var(--acc3);}
+@keyframes focusPulse{0%,100%{box-shadow:0 0 0 1px var(--acc-b);}50%{box-shadow:0 0 0 3px var(--acc-b);}}
+.th-row.focus-now{animation:focusPulse 2s ease-in-out infinite;}
 /* REMINDER */
 .reminder-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;}
 .reminder-overlay.open{display:flex;}
@@ -540,6 +556,10 @@ tr.sub-add-row td{background:rgba(124,111,232,0.03);}
     <div class="card">
       <div class="card-title">🚫 Blockers</div>
       <div id="homeBlockers"><p style="font-size:12px;color:var(--muted)">No blockers.</p></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🙏 Did you Pray Today?</div>
+      <div id="homePrayers"><p style="font-size:12px;color:var(--muted)">No prayers set. Visit the Intentions tab.</p></div>
     </div>
     <div class="card">
       <div class="card-title">✅ Completed Today
@@ -675,6 +695,16 @@ tr.sub-add-row td{background:rgba(124,111,232,0.03);}
       <button class="btn btn-acc" onclick="addIntention()">＋ Add</button>
     </div>
     <div id="intList"></div>
+
+    <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--border)">
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:4px">🙏 Prayers Today</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Standing prayers you want to track each day. These appear on the Home tab and uncheck each day instead of being removed.</p>
+      <div class="int-add-area">
+        <input type="text" class="int-add-input" id="prayerInput" placeholder="Add a prayer…" onkeydown="if(event.key==='Enter')addPrayer()">
+        <button class="btn btn-acc" onclick="addPrayer()">＋ Add</button>
+      </div>
+      <div id="prayerList"></div>
+    </div>
   </div>
 </div>
 
@@ -689,8 +719,14 @@ tr.sub-add-row td{background:rgba(124,111,232,0.03);}
     </div>
     <div id="qQuotesView">
       <div style="display:flex;gap:8px;margin-bottom:14px">
-        <input type="text" id="newQText" placeholder="Quote…" style="flex:2;padding:8px 11px;background:var(--card-bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--body-font);font-size:13px;outline:none">
-        <input type="text" id="newQAuthor" placeholder="— Author" style="flex:1;padding:8px 11px;background:var(--card-bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--body-font);font-size:13px;outline:none">
+        <input type="text" id="newQText" placeholder="Quote…" style="flex:2;padding:8px 11px;background:var(--card-bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--body-font);font-size:13px;outline:none" onkeydown="if(event.key==='Enter')addQuote()">
+        <div style="flex:1;position:relative">
+          <input type="text" id="newQAuthor" placeholder="— Author" style="width:100%;padding:8px 11px;background:var(--card-bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--body-font);font-size:13px;outline:none;box-sizing:border-box"
+            oninput="showAuthorSuggest(this)"
+            onblur="setTimeout(hideAuthorSuggest,150)"
+            onkeydown="authorSuggestKeyNav(event,this);if(event.key==='Enter')addQuote()">
+          <div id="authorSuggestDrop" class="cat-suggest" style="display:none;position:absolute;top:100%;left:0;z-index:600;min-width:100%"></div>
+        </div>
         <button class="btn btn-acc" onclick="addQuote()">Add</button>
       </div>
       <div id="quotesList"></div>
@@ -1236,6 +1272,7 @@ let notes    = ls.get('gsd_notes', []);
 let affPools = ls.get('gsd_affs',  seedAffs());
 let quotes   = ls.get('gsd_quotes', []);
 let intentions = ls.get('gsd_ints', []);
+let prayers  = ls.get('gsd_prayers', []);
 let taskSeq  = ls.get('gsd_tseq', 200);
 
 // undo/redo
@@ -1243,6 +1280,8 @@ let undoStack=[], redoStack=[];
 // home drag
 let _homeDragId=null, _homeDragSec=null;
 var reminderFired=false, snoozeUntil=null;
+// currently focused task on home
+let focusTaskId=null;
 
 // ══════════════════════════════════════════════════
 // SEED DATA (used only if Supabase tables are empty)
@@ -1411,6 +1450,17 @@ async function loadFromSupabase(){
       const cfgMap = {};
       sbCfg.forEach(row => { cfgMap[row.key] = row.value; });
       if(Object.keys(cfgMap).length > 0){
+        // Extract prayers from cfg before merging into main cfg
+        if(cfgMap.prayers){
+          try {
+            const sbPrayers = JSON.parse(cfgMap.prayers);
+            if(Array.isArray(sbPrayers)){
+              prayers = sbPrayers;
+              ls.set('gsd_prayers', prayers);
+            }
+          } catch(e){ console.warn('prayers parse error', e); }
+          delete cfgMap.prayers;
+        }
         Object.assign(cfg, cfgMap);
         ls.set('gsd_cfg', cfg);
       } else {
@@ -1690,6 +1740,8 @@ function tick(){
   const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   document.getElementById('hdrDate').textContent=`${days[n.getDay()]} ${months[n.getMonth()]} ${n.getDate()}, ${n.getFullYear()}`;
   checkReminder(n);
+  // Check once per minute if prayers need to be unchecked for the new day
+  if(s===0) uncheckPrayersForNewDay();
 }
 setInterval(tick,1000);tick();
 
@@ -1797,7 +1849,7 @@ function goPage(id,btn){
   if(id==='affirmations') renderAffPage();
   if(id==='settings') renderSettings();
   if(id==='notes') renderStickies();
-  if(id==='intentions') renderIntentions();
+  if(id==='intentions') { renderIntentions(); renderPrayerList(); }
   if(id==='quotes') renderQuotesList();
 }
 function openModal(id){document.getElementById(id).classList.add('open');}
@@ -1944,6 +1996,7 @@ function renderHome(){
     :`<p style="font-size:12px;color:var(--muted)">No tasks flagged for tomorrow.</p>`;
 
   renderHomeIntentions();
+  renderHomePrayers();
 
   const blockEl=document.getElementById('homeBlockers');
   if(!blocked.length){blockEl.innerHTML=`<p style="font-size:12px;color:var(--muted)">No blockers.</p>`;}
@@ -1963,6 +2016,7 @@ function renderHome(){
   }
   renderCompletedToday();
   renderHomeIntentions();
+  renderHomePrayers();
   drawMoment();
   drawQuote();
 }
@@ -1973,11 +2027,20 @@ function taskRow(t, section){
   let badge=isOD?`<span class="th-badge b-od">Overdue</span>`:t.status==='In Progress'?`<span class="th-badge b-prog">In Progress</span>`:'';
   const parentLabel=t.parentId?`<span style="font-size:10px;color:var(--muted);margin-left:4px">↳ subtask</span>`:'';
   const sec=section||'';
-  return`<div class="th-row" draggable="true" ondragstart="homeDragStart(event,${t.id},'${sec}')" ondragend="this.style.opacity=''" ondragover="homeDragOver(event,${t.id},'${sec}')" ondrop="homeDrop(event,${t.id},'${sec}')" ondragleave="homeDragLeave(event)" style="cursor:grab">
+  const isFocused=focusTaskId===t.id;
+  const focusBtnLabel=isFocused?'▶ Working':'▶';
+  return`<div class="th-row${isFocused?' focus-now':''}" draggable="true" ondragstart="homeDragStart(event,${t.id},'${sec}')" ondragend="this.style.opacity=''" ondragover="homeDragOver(event,${t.id},'${sec}')" ondrop="homeDrop(event,${t.id},'${sec}')" ondragleave="homeDragLeave(event)" style="cursor:grab">
     <div class="th-dot" style="background:${dot}"></div>
     <div class="th-name" style="cursor:pointer" onclick="openTaskModalFromHome(${t.id})">${esc(t.task)}${parentLabel}</div>
     ${badge}<div class="th-due">${t.dueDate?fmt(t.dueDate):''}</div>
+    <button class="focus-btn${isFocused?' active':''}" onclick="setFocusTask(${t.id})" title="${isFocused?'Currently working on this — click to clear':'Mark as what I\'m working on now'}">${focusBtnLabel}</button>
   </div>`;
+}
+
+function setFocusTask(id){
+  // Toggle: clicking the focused task clears focus
+  focusTaskId = (focusTaskId===id) ? null : id;
+  renderHome();
 }
 
 function renderHomeIntentions(){
@@ -1997,13 +2060,58 @@ function renderHomeIntentions(){
   document.getElementById('homeIntentions').innerHTML=intsForDate.length
     ?intsForDate.map(i=>`<div class="int-row">
         <input type="checkbox" class="int-cb" ${i.done?'checked':''} onchange="toggleIntHome('${i._sbid||i.id}',this)" style="width:14px;height:14px;cursor:pointer;accent-color:var(--acc);flex-shrink:0">
-        <span class="int-text${i.done?' done':''}">${esc(i.text)}</span>
+        <span class="int-text${i.done?' done':''}"
+          contenteditable="${i.done?'false':'true'}"
+          spellcheck="false"
+          style="flex:1;outline:none;border-radius:4px;padding:1px 3px;cursor:${i.done?'default':'text'}"
+          onfocus="this.style.background='var(--bg4)';this.style.outline='1px solid var(--acc)'"
+          onblur="this.style.background='';this.style.outline='';saveIntHomeInline('${i._sbid||i.id}',this)"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+        >${esc(i.text)}</span>
         ${i.done&&i.doneAt?`<span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;flex-shrink:0">${new Date(i.doneAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>`:''}
       </div>`).join('')
     :`<p style="font-size:12px;color:var(--muted)">No intentions set.</p>`;
 }
 
+function saveIntHomeInline(id, el){
+  const text=el.textContent.trim();
+  const i=intentions.find(x=>String(x._sbid||x.id)===String(id));if(!i)return;
+  if(!text){el.textContent=i.text;return;}
+  if(text===i.text)return;
+  i.text=text;
+  saveIntentions();
+}
+
 function setMaToday(){document.getElementById('maDate').value=effectiveToday();renderCompletedToday();renderHomeIntentions();}
+
+function renderHomePrayers(){
+  const el=document.getElementById('homePrayers');if(!el)return;
+  if(!prayers.length){el.innerHTML=`<p style="font-size:12px;color:var(--muted)">No prayers set. Visit the Intentions tab.</p>`;return;}
+  el.innerHTML=prayers.map(p=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;">
+    <input type="checkbox" class="prayer-cb" ${p.checkedToday?'checked':''} onchange="togglePrayerHome('${p.id}',this)">
+    <span style="flex:1;font-size:var(--p-size);${p.checkedToday?'text-decoration:line-through;color:var(--muted)':''}">${esc(p.text)}</span>
+  </div>`).join('')+`<div style="height:4px"></div>`;
+}
+
+function togglePrayerHome(id, cb){
+  const p=prayers.find(x=>String(x.id)===String(id));if(!p)return;
+  p.checkedToday=cb.checked;
+  p.checkedDate=effectiveToday();
+  savePrayers();renderHomePrayers();
+}
+
+// Called at day rollover — uncheck all prayers for the new day
+function uncheckPrayersForNewDay(){
+  const today=effectiveToday();
+  let changed=false;
+  prayers.forEach(p=>{
+    if(p.checkedToday&&p.checkedDate&&p.checkedDate!==today){
+      p.checkedToday=false;
+      changed=true;
+    }
+  });
+  if(changed){savePrayers();renderHomePrayers();renderPrayerList();}
+}
 function renderCompletedToday(){
   const d=document.getElementById('maDate')?.value||effectiveToday();
   const done=tasks.filter(t=>t.completedAt&&taskCompletedDate(t)===d);
@@ -2638,6 +2746,10 @@ function renderAffPage(){
   const totalPages=Math.ceil(total/PAGE_SZ)||1;
   pg.innerHTML=`<div class="aff-section">
     <div class="aff-section-title">${esc(pool.name)}<span style="font-size:10px;color:var(--muted)">${total} total</span></div>
+    <div class="aff-add-row" style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);border-top:none;margin-top:0;padding-top:0">
+      <input class="aff-add-input" type="text" id="affIn_main" placeholder="Add affirmation…" onkeydown="if(event.key==='Enter')addAff()">
+      <button class="btn btn-acc btn-sm" onclick="addAff()">+ Add</button>
+    </div>
     ${slice.length?slice.map(item=>`
       <div class="aff-line">
         <span class="aff-line-num">${item.origIdx+1}</span>
@@ -2652,10 +2764,6 @@ function renderAffPage(){
       <span style="font-size:11px;color:var(--muted)">Page ${page+1} / ${totalPages}</span>
       <button class="btn btn-ghost btn-xs" ${page>=totalPages-1?'disabled':''} onclick="affPg(1)">Next →</button>
     </div>`:''}
-    <div class="aff-add-row">
-      <input class="aff-add-input" type="text" id="affIn_main" placeholder="Add affirmation…" onkeydown="if(event.key==='Enter')addAff()">
-      <button class="btn btn-acc btn-sm" onclick="addAff()">+ Add</button>
-    </div>
   </div>`;
 }
 
@@ -2762,9 +2870,144 @@ function saveIntInline(id, el){
 }
 
 // ══════════════════════════════════════════════════
+// PRAYERS
+// ══════════════════════════════════════════════════
+let prayerSeq = ls.get('gsd_pseq', 1);
+
+async function savePrayers(){
+  ls.set('gsd_prayers', prayers);
+  setSyncStatus('saving');
+  try {
+    await sb.setCfg('prayers', JSON.stringify(prayers));
+    setSyncStatus('synced'); flashSaved();
+  } catch(e){ console.error('savePrayers error:',e); setSyncStatus('error'); }
+}
+
+function addPrayer(){
+  const inp=document.getElementById('prayerInput');
+  const text=inp?.value.trim();if(!text)return;
+  const newP={id:'p'+prayerSeq++,text,checkedToday:false,checkedDate:null,created:new Date().toISOString()};
+  prayers.push(newP);
+  ls.set('gsd_pseq',prayerSeq);
+  inp.value='';
+  savePrayers();
+  renderPrayerList();
+  renderHomePrayers();
+}
+
+function deletePrayer(id){
+  if(!confirm('Remove this prayer?'))return;
+  prayers=prayers.filter(x=>String(x.id)!==String(id));
+  savePrayers();renderPrayerList();renderHomePrayers();
+}
+
+let _prayerDragIdx=null;
+
+function prayerDragStart(e,idx){
+  _prayerDragIdx=idx;
+  e.dataTransfer.effectAllowed='move';
+  e.dataTransfer.setData('text/plain',String(idx));
+  setTimeout(()=>{const rows=document.querySelectorAll('#prayerList .int-list-row');if(rows[idx])rows[idx].style.opacity='.4';},0);
+}
+function prayerDragEnd(){
+  _prayerDragIdx=null;
+  document.querySelectorAll('#prayerList .int-list-row').forEach(r=>{r.style.opacity='';r.style.background='';});
+}
+function prayerDragOver(e,idx){
+  e.preventDefault();
+  if(_prayerDragIdx===null||_prayerDragIdx===idx)return;
+  e.dataTransfer.dropEffect='move';
+  const rows=document.querySelectorAll('#prayerList .int-list-row');
+  rows.forEach((r,i)=>r.style.background=i===idx?'var(--acc3)':'');
+}
+function prayerDragLeave(){
+  document.querySelectorAll('#prayerList .int-list-row').forEach(r=>r.style.background='');
+}
+function prayerDrop(e,toIdx){
+  e.preventDefault();
+  document.querySelectorAll('#prayerList .int-list-row').forEach(r=>{r.style.opacity='';r.style.background='';});
+  if(_prayerDragIdx===null||_prayerDragIdx===toIdx){_prayerDragIdx=null;return;}
+  const fromIdx=_prayerDragIdx;_prayerDragIdx=null;
+  const moved=prayers.splice(fromIdx,1)[0];
+  prayers.splice(toIdx,0,moved);
+  savePrayers();renderPrayerList();renderHomePrayers();
+}
+
+function renderPrayerList(){
+  const el=document.getElementById('prayerList');if(!el)return;
+  if(!prayers.length){el.innerHTML=`<p style="font-size:13px;color:var(--muted)">No prayers yet. Add one above.</p>`;return;}
+  el.innerHTML=prayers.map((p,idx)=>`
+    <div class="int-list-row" draggable="true"
+      ondragstart="prayerDragStart(event,${idx})"
+      ondragend="prayerDragEnd()"
+      ondragover="prayerDragOver(event,${idx})"
+      ondragleave="prayerDragLeave()"
+      ondrop="prayerDrop(event,${idx})"
+      style="cursor:grab">
+      <span style="color:var(--muted);font-size:12px;padding-right:4px;cursor:grab;flex-shrink:0">⠿</span>
+      <input type="checkbox" class="int-cb2" ${p.checkedToday?'checked':''} onchange="togglePrayerHome('${p.id}',this)">
+      <span class="int-txt${p.checkedToday?' done':''}"
+        contenteditable="true" spellcheck="false"
+        style="flex:1;outline:none;border-radius:4px;padding:1px 3px;cursor:text"
+        onfocus="this.style.background='var(--bg4)';this.style.outline='1px solid var(--acc)'"
+        onblur="this.style.background='';this.style.outline='';savePrayerInline('${p.id}',this)"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+      >${esc(p.text)}</span>
+      <button class="int-del" onclick="deletePrayer('${p.id}')">✕</button>
+    </div>`).join('');
+}
+
+function savePrayerInline(id, el){
+  const text=el.textContent.trim();
+  const p=prayers.find(x=>String(x.id)===String(id));if(!p)return;
+  if(!text){el.textContent=p.text;return;}
+  if(text===p.text)return;
+  p.text=text;
+  savePrayers();
+}
+
+// ══════════════════════════════════════════════════
 // QUOTES
 // ══════════════════════════════════════════════════
 var quotePage=0;const QUOTE_PAGE_SIZE=15;
+
+let _authorSuggestIdx=-1;
+function getAllAuthors(){
+  const s=new Set();
+  quotes.forEach(q=>{if(q.author&&q.author.trim())s.add(q.author.trim());});
+  return [...s].sort();
+}
+function showAuthorSuggest(inp){
+  hideAuthorSuggest();
+  const val=(inp.value||'').trim().toLowerCase();
+  if(!val)return;
+  const matches=getAllAuthors().filter(a=>a.toLowerCase().includes(val));
+  if(!matches.length)return;
+  _authorSuggestIdx=-1;
+  const drop=document.getElementById('authorSuggestDrop');
+  drop.innerHTML=matches.slice(0,8).map(a=>`<div class="cat-suggest-item" onmousedown="pickAuthorSuggest('${esc(a).replace(/'/g,"\\'")}')">${esc(a)}</div>`).join('');
+  drop.style.display='block';
+}
+function hideAuthorSuggest(){
+  const d=document.getElementById('authorSuggestDrop');
+  if(d){d.style.display='none';d.innerHTML='';}
+  _authorSuggestIdx=-1;
+}
+function pickAuthorSuggest(author){
+  const inp=document.getElementById('newQAuthor');if(!inp)return;
+  inp.value=author;
+  hideAuthorSuggest();
+  inp.focus();
+}
+function authorSuggestKeyNav(e,inp){
+  const drop=document.getElementById('authorSuggestDrop');
+  if(!drop||drop.style.display==='none')return;
+  const items=[...drop.querySelectorAll('.cat-suggest-item')];
+  if(e.key==='ArrowDown'){e.preventDefault();_authorSuggestIdx=Math.min(_authorSuggestIdx+1,items.length-1);items.forEach((it,i)=>it.classList.toggle('active',i===_authorSuggestIdx));}
+  else if(e.key==='ArrowUp'){e.preventDefault();_authorSuggestIdx=Math.max(_authorSuggestIdx-1,0);items.forEach((it,i)=>it.classList.toggle('active',i===_authorSuggestIdx));}
+  else if(e.key==='Enter'&&_authorSuggestIdx>=0){e.preventDefault();pickAuthorSuggest(items[_authorSuggestIdx].textContent);}
+  else if(e.key==='Escape'){hideAuthorSuggest();}
+}
 
 function addQuote(){
   const t=document.getElementById('newQText').value.trim();const a=document.getElementById('newQAuthor').value.trim();if(!t)return;
@@ -2914,7 +3157,7 @@ function saveIdentity(){
   cfg.user=document.getElementById('setUser').value.trim()||'';
   cfg.birth=document.getElementById('setBirth').value||'';
   saveCfg();
-  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name)} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.1.4</span>`;
+  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name)} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.1.5</span>`;
   alert('Saved!');
 }
 function saveApiKey(){cfg.apiKey=document.getElementById('setApiKey').value.trim();saveCfg();alert('API key saved.');}
@@ -3017,13 +3260,21 @@ function handleImportFile(){
 // ══════════════════════════════════════════════════
 function checkReminder(now){
   if(snoozeUntil&&now<snoozeUntil)return;
+  // If we've passed the snooze window, clear it so we can re-check
+  if(snoozeUntil&&now>=snoozeUntil) snoozeUntil=null;
   const h=now.getHours(),m=now.getMinutes();
   const key='gsd_rem_'+now.toDateString();
   if(h===23&&m===45&&!reminderFired&&!localStorage.getItem(key)){
     reminderFired=true;document.getElementById('reminderOverlay').classList.add('open');
   }
+  // Reset reminderFired each minute so snooze can re-trigger
+  if(!(h===23&&m===45)) reminderFired=false;
 }
-function snooze(mins){snoozeUntil=new Date(Date.now()+mins*60000);document.getElementById('reminderOverlay').classList.remove('open');}
+function snooze(mins){
+  snoozeUntil=new Date(Date.now()+mins*60000);
+  reminderFired=false; // allow re-fire after snooze expires
+  document.getElementById('reminderOverlay').classList.remove('open');
+}
 function dismissReminder(){localStorage.setItem('gsd_rem_'+new Date().toDateString(),'1');document.getElementById('reminderOverlay').classList.remove('open');goPage('intentions',document.querySelector('.nav-tab[data-page=intentions]'));}
 
 // TAG AUTOCOMPLETE
@@ -3169,7 +3420,7 @@ async function init(){
   document.documentElement.dataset.theme=cfg.theme||'dark';
   document.documentElement.dataset.palette=cfg.palette||'amethyst';
   document.getElementById('themeBtn').textContent=(cfg.theme||'dark')==='light'?'🌙 Dark':'☀ Light';
-  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name||"Shaun's Personal Dashboard")} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.1.4</span>`;
+  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name||"Shaun's Personal Dashboard")} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.1.5</span>`;
   applyAppearance();
 
   document.getElementById('maDate').value=effectiveToday();
@@ -3180,6 +3431,9 @@ async function init(){
   document.getElementById('notesBadge').textContent=notes.length;
   updateUndoBtn();
   document.querySelectorAll('.pal-chip[data-p]').forEach(c=>c.classList.toggle('sel',c.dataset.p===(cfg.palette||'amethyst')));
+
+  // Check prayers on startup (uncheck if they belong to a previous day)
+  uncheckPrayersForNewDay();
 
   // Then load fresh from Supabase
   await loadFromSupabase();
