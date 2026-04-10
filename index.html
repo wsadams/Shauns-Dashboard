@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Shaun's Personal Dashboard v3.1.3</title>
+<title>Shaun's Personal Dashboard v3.1.4</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Inter:wght@300;400;500;600&family=Nunito:wght@300;400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /* ── PALETTE ACCENTS ─────────────────────────────── */
@@ -425,7 +425,7 @@ tr.sub-add-row td{background:rgba(124,111,232,0.03);}
 .iam-text strong{font-weight:600;color:var(--acc2);}
 .iam-src{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-top:18px;transition:opacity .7s;}
 .iam-bar-wrap{width:180px;height:2px;background:var(--bg4);border-radius:99px;margin-top:24px;overflow:hidden;}
-.iam-bar{height:100%;background:var(--acc);border-radius:99px;width:100%;transform-origin:left;transition:none;}
+.iam-bar{height:100%;background:var(--acc);opacity:0.3;border-radius:99px;width:100%;transform-origin:left;transition:none;}
 .iam-ctrls{position:fixed;bottom:22px;display:flex;gap:9px;}
 
 /* ══════════════════════════════════════════════════
@@ -474,7 +474,7 @@ tr.sub-add-row td{background:rgba(124,111,232,0.03);}
 <div class="header-wrap">
 <header>
   <div class="logo-block">
-    <div class="logo-name" id="logoName">Shaun's Personal Dashboard <span style="font-size:11px;color:var(--muted);font-weight:400">v3.1.3</span></div>
+    <div class="logo-name" id="logoName">Shaun's Personal Dashboard <span style="font-size:11px;color:var(--muted);font-weight:400">v3.1.4</span></div>
     <div class="logo-sub" id="logoSub">Get Shit Done</div>
   </div>
   <div class="hdr-right">
@@ -849,6 +849,36 @@ tr.sub-add-row td{background:rgba(124,111,232,0.03);}
       </div>
     </div>
     <div class="card">
+      <div class="card-title">Screensaver</div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="field">
+          <label>Slide Duration <span id="ssvDurVal" style="color:var(--acc2);font-weight:400;font-size:11px;margin-left:6px">30s</span></label>
+          <input type="range" id="ssvDurRange" min="5" max="300" step="5" value="30" oninput="setSsvDuration(this.value)" style="width:100%;accent-color:var(--acc);margin-top:4px">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:2px"><span>5s</span><span>30s</span><span>2m</span><span>5m</span></div>
+        </div>
+        <div class="field">
+          <label>Font Size <span id="ssvSizeVal" style="color:var(--acc2);font-weight:400;font-size:11px;margin-left:6px">32px</span></label>
+          <input type="range" id="ssvSizeRange" min="16" max="72" step="2" value="32" oninput="setSsvSize(this.value)" style="width:100%;accent-color:var(--acc);margin-top:4px">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:2px"><span>16</span><span>32</span><span>52</span><span>72</span></div>
+        </div>
+        <div class="field">
+          <label>Font</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+            <button id="ssv-font-dmsans"    class="pal-chip sel" onclick="setSsvFont('DM Sans','ssv-font-dmsans')">DM Sans</button>
+            <button id="ssv-font-playfair"  class="pal-chip"     onclick="setSsvFont('Playfair Display','ssv-font-playfair')">Playfair</button>
+            <button id="ssv-font-cinzel"    class="pal-chip"     onclick="setSsvFont('Cinzel','ssv-font-cinzel')">Cinzel</button>
+            <button id="ssv-font-cormorant" class="pal-chip"     onclick="setSsvFont('Cormorant Garamond','ssv-font-cormorant')">Cormorant</button>
+            <button id="ssv-font-josefin"   class="pal-chip"     onclick="setSsvFont('Josefin Sans','ssv-font-josefin')">Josefin</button>
+            <button id="ssv-font-raleway"   class="pal-chip"     onclick="setSsvFont('Raleway','ssv-font-raleway')">Raleway</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="ssvQuotesChk" onchange="setSsvIncludeQuotes(this.checked)" style="accent-color:var(--acc);width:14px;height:14px;cursor:pointer">
+          <label for="ssvQuotesChk" style="font-size:13px;color:var(--text);cursor:pointer">Include Quotes in rotation</label>
+        </div>
+      </div>
+    </div>
+    <div class="card">
       <div class="card-title">Day Rollover</div>
       <div style="display:flex;flex-direction:column;gap:10px">
         <p style="font-size:12px;color:var(--muted);line-height:1.6">Tasks completed before this hour are counted as the <em>previous</em> day. Useful if your day ends after midnight.</p>
@@ -914,8 +944,9 @@ tr.sub-add-row td{background:rgba(124,111,232,0.03);}
   <div class="iam-text" id="iamText"></div>
   <div class="iam-src" id="iamSrc"></div>
   <div class="iam-bar-wrap"><div class="iam-bar" id="iamBar"></div></div>
-  <div class="iam-ctrls">
+  <div class="iam-ctrls" style="display:flex;align-items:center;gap:10px">
     <button class="btn btn-ghost btn-sm" onclick="iamNext()">↺ Next</button>
+    <span id="iamCountdown" style="font-family:'DM Mono',monospace;font-size:11px;color:rgba(255,255,255,.35);min-width:36px;text-align:center"></span>
     <button class="btn btn-ghost btn-sm" onclick="closeIAM()">✕ Exit</button>
   </div>
 </div>
@@ -1314,13 +1345,24 @@ async function loadFromSupabase(){
 
     // Notes
     if(sbNotes !== null){
-      notes = sbNotes.map(n=>({
-        id: new Date(n.created_at).getTime() || Date.now(),
-        _sbid: n.id,  // Supabase UUID — critical for insert-vs-update check
-        title: n.title||'', body: n.content||'',
-        color: n.color||'s-yellow', x: n.position_x||30, y: n.position_y||20,
-        created: new Date(n.created_at).getTime()
-      }));
+      const lsCachedNotes = ls.get('gsd_notes', []);
+      notes = sbNotes.map((n,i)=>{
+        const localCopy = lsCachedNotes.find(l=>l._sbid===n.id);
+        // Position priority: Supabase > localStorage cache > auto-layout grid
+        const col = i % 3;
+        const row = Math.floor(i / 3);
+        const autoX = 20 + col * 240;
+        const autoY = 20 + row * 260;
+        return {
+          id: new Date(n.created_at).getTime() || (Date.now()+i),
+          _sbid: n.id,
+          title: n.title||'', body: n.content||'',
+          color: n.color||'s-yellow',
+          x: (n.position_x!=null && n.position_x!==0 ? n.position_x : (localCopy?.x ?? autoX)),
+          y: (n.position_y!=null && n.position_y!==0 ? n.position_y : (localCopy?.y ?? autoY)),
+          created: new Date(n.created_at).getTime()
+        };
+      });
       ls.set('gsd_notes', notes);
     }
 
@@ -1613,7 +1655,7 @@ async function deleteIntentionFromSB(i){
 
 async function syncCfgToSupabase(){
   try {
-    const keys = ['name','user','birth','palette','theme','headerBg','bodyBg','cardBg','fontFamily','fontWeight','momentColor','momentSize','affPageSize','bodyFontSize','thNameSize','blockerNameSize','pSize','logoNameSize','logoSubSize','headerPad','mainPad','dayRollover','logoPadV'];
+    const keys = ['name','user','birth','palette','theme','headerBg','bodyBg','cardBg','fontFamily','fontWeight','momentColor','momentSize','affPageSize','bodyFontSize','thNameSize','blockerNameSize','pSize','logoNameSize','logoSubSize','headerPad','mainPad','dayRollover','logoPadV','ssvDuration','ssvFont','ssvSize','ssvIncludeQuotes'];
     for(const k of keys){
       if(cfg[k] !== undefined) await sb.setCfg(k, cfg[k]);
     }
@@ -1687,6 +1729,8 @@ function applyAppearance(){
   r.setProperty('--logo-sub-size', (cfg.logoSubSize||10)+'px');
   r.setProperty('--header-padding-h', (cfg.headerPad||22)+'px');
   r.setProperty('--logo-padding-v', (cfg.logoPadV||10)+'px');
+  r.setProperty('--iam-font-size',(cfg.ssvSize||32)+'px');
+  r.setProperty('--iam-font-family',"'"+(cfg.ssvFont||'DM Sans')+"',serif");
   r.setProperty('--main-padding', `${cfg.mainPad||18}px 22px`);
 }
 
@@ -1802,13 +1846,7 @@ function completeFromHome(id, cb){
 }
 
 function openTaskModalFromHome(id){
-  // Navigate to workflow tab and open the note popover
-  goPage('tasks',document.querySelector('.nav-tab[data-page=tasks]'));
-  setTimeout(()=>{
-    const row=document.querySelector(`tr[data-id="${id}"] .note-btn`);
-    if(row) row.click();
-    else openTaskModal(id);
-  },100);
+  openTaskModal(id);
 }
 
 function homeDragStart(e,id,sec){
@@ -2477,6 +2515,7 @@ function renderNotesTable(){
     </tr>`;
   }).join('');
 }
+
 function renderStickies(){
   const board=document.getElementById('stickyBoard');if(!board)return;
   board.innerHTML='';
@@ -2500,6 +2539,14 @@ function renderStickies(){
   });
   if(q&&!filtered.length){board.innerHTML='<div style="padding:30px;text-align:center;color:var(--muted);font-size:13px">No notes matching "'+esc(q)+'"</div>';}
 }
+
+
+
+
+
+
+
+
 function makeDrag(el,note,board){
   let ox,oy,moved=false;
   el.addEventListener('mousedown',e=>{
@@ -2688,7 +2735,8 @@ function deleteInt(id){
 function renderIntentions(){
   const el=document.getElementById('intList');if(!el)return;
   if(!intentions.length){el.innerHTML=`<p style="font-size:13px;color:var(--muted)">No intentions yet. Set one above.</p>`;return;}
-  el.innerHTML=intentions.map(i=>`
+  const sorted=[...intentions].sort((a,b)=>a.done===b.done?0:a.done?1:-1);
+  el.innerHTML=sorted.map(i=>`
     <div class="int-list-row">
       <input type="checkbox" class="int-cb2" ${i.done?'checked':''} onchange="toggleInt(${i.id},this)">
       <span class="int-txt${i.done?' done':''}"
@@ -2781,19 +2829,41 @@ let iamInterval=null,iamBarTimer=null;
 function openIAM(){document.getElementById('iam-overlay').classList.add('open');iamNext();}
 function closeIAM(){document.getElementById('iam-overlay').classList.remove('open');if(iamInterval)clearInterval(iamInterval);if(iamBarTimer)clearInterval(iamBarTimer);}
 function iamNext(){
-  const pool=buildPool();const decrees=(affPools.decrees?.items||[]).map(d=>d.text);
-  const all=[...pool,...decrees];if(!all.length)return;
-  const text=all[Math.floor(Math.random()*all.length)];
+  const dur=(cfg.ssvDuration||30)*1000;
+  const inclQuotes=cfg.ssvIncludeQuotes!==false;
+  const pool=buildPool();
+  const decrees=(affPools.decrees?.items||[]).map(d=>d.text);
+  const quoteTexts=inclQuotes?quotes.map(q=>({text:q.text,author:q.author||'',isQuote:true})):[];
+  const affTexts=[...pool,...decrees].map(t=>({text:t,author:'',isQuote:false}));
+  const all=[...affTexts,...quoteTexts];if(!all.length)return;
+  const item=all[Math.floor(Math.random()*all.length)];
   const tEl=document.getElementById('iamText');const sEl=document.getElementById('iamSrc');
   tEl.style.opacity=0;sEl.style.opacity=0;
-  setTimeout(()=>{tEl.innerHTML=text.replace(/I AM/g,'<strong>I AM</strong>');tEl.style.opacity=1;sEl.style.opacity=1;},500);
-  startIamBar();if(iamInterval)clearInterval(iamInterval);iamInterval=setTimeout(iamNext,5*60*1000);
+  setTimeout(()=>{
+    if(item.isQuote){
+      tEl.innerHTML=esc(item.text);
+      sEl.textContent=item.author?'— '+item.author:'';
+    } else {
+      tEl.innerHTML=item.text.replace(/I AM/g,'<strong>I AM</strong>');
+      sEl.textContent='';
+    }
+    tEl.style.opacity=1;sEl.style.opacity=1;
+  },500);
+  startIamBar(dur);if(iamInterval)clearInterval(iamInterval);iamInterval=setTimeout(iamNext,dur);
 }
-function startIamBar(){
-  const bar=document.getElementById('iamBar');const start=Date.now();const dur=5*60*1000;
+function startIamBar(dur){
+  dur=dur||(cfg.ssvDuration||30)*1000;
+  const bar=document.getElementById('iamBar');const start=Date.now();
   bar.style.transition='none';bar.style.transform='scaleX(1)';
   if(iamBarTimer)clearInterval(iamBarTimer);
-  iamBarTimer=setInterval(()=>{const p=Math.max(0,1-(Date.now()-start)/dur);bar.style.transition='none';bar.style.transform=`scaleX(${p})`;if(p<=0)clearInterval(iamBarTimer);},500);
+  iamBarTimer=setInterval(()=>{
+    const elapsed=Date.now()-start;
+    const p=Math.max(0,1-elapsed/dur);
+    bar.style.transition='none';bar.style.transform=`scaleX(${p})`;
+    const cd=document.getElementById('iamCountdown');
+    if(cd)cd.textContent=Math.ceil(Math.max(0,dur-elapsed)/1000)+'s';
+    if(p<=0)clearInterval(iamBarTimer);
+  },500);
 }
 
 // ══════════════════════════════════════════════════
@@ -2828,6 +2898,13 @@ function renderSettings(){
   const lpv=cfg.logoPadV??10;document.getElementById('logoPadVRange').value=lpv;document.getElementById('logoPadVVal').textContent=lpv+'px';
   const mp=cfg.mainPad||18;document.getElementById('mainPadRange').value=mp;document.getElementById('mainPadVal').textContent=mp+'px';
   const ro=cfg.dayRollover??3;document.getElementById('rolloverRange').value=ro;
+  const ssvD=cfg.ssvDuration||30;document.getElementById('ssvDurRange').value=ssvD;
+  document.getElementById('ssvDurVal').textContent=ssvD<60?ssvD+'s':Math.floor(ssvD/60)+'m'+(ssvD%60?ssvD%60+'s':'');
+  const ssvSz=cfg.ssvSize||32;document.getElementById('ssvSizeRange').value=ssvSz;document.getElementById('ssvSizeVal').textContent=ssvSz+'px';
+  document.querySelectorAll('[id^="ssv-font-"]').forEach(b=>b.classList.remove('sel'));
+  const ssvFontMap={'DM Sans':'ssv-font-dmsans','Playfair Display':'ssv-font-playfair','Cinzel':'ssv-font-cinzel','Cormorant Garamond':'ssv-font-cormorant','Josefin Sans':'ssv-font-josefin','Raleway':'ssv-font-raleway'};
+  const ssvFId=ssvFontMap[cfg.ssvFont||'DM Sans'];if(ssvFId)document.getElementById(ssvFId)?.classList.add('sel');
+  document.getElementById('ssvQuotesChk').checked=cfg.ssvIncludeQuotes!==false;
   document.getElementById('rolloverVal').textContent=ro===0?'12:00 AM':`${ro}:00 AM`;
   renderProjSettings();
 }
@@ -2837,7 +2914,7 @@ function saveIdentity(){
   cfg.user=document.getElementById('setUser').value.trim()||'';
   cfg.birth=document.getElementById('setBirth').value||'';
   saveCfg();
-  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name)} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.1.3</span>`;
+  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name)} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.1.4</span>`;
   alert('Saved!');
 }
 function saveApiKey(){cfg.apiKey=document.getElementById('setApiKey').value.trim();saveCfg();alert('API key saved.');}
@@ -3062,6 +3139,29 @@ document.addEventListener('fullscreenchange',()=>{
 });
 
 // ══════════════════════════════════════════════════
+// SCREENSAVER SETTINGS
+// ══════════════════════════════════════════════════
+function setSsvDuration(val){
+  cfg.ssvDuration=parseInt(val);saveCfg();
+  const s=parseInt(val);
+  document.getElementById('ssvDurVal').textContent=s<60?s+'s':Math.floor(s/60)+'m'+(s%60?s%60+'s':'');
+}
+function setSsvSize(val){
+  cfg.ssvSize=parseInt(val);saveCfg();
+  document.getElementById('ssvSizeVal').textContent=val+'px';
+  document.documentElement.style.setProperty('--iam-font-size',val+'px');
+}
+function setSsvFont(font,btnId){
+  cfg.ssvFont=font;saveCfg();
+  document.querySelectorAll('[id^="ssv-font-"]').forEach(b=>b.classList.remove('sel'));
+  document.getElementById(btnId)?.classList.add('sel');
+  document.documentElement.style.setProperty('--iam-font-family',"'"+font+"',serif");
+}
+function setSsvIncludeQuotes(val){
+  cfg.ssvIncludeQuotes=val;saveCfg();
+}
+
+// ══════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════
 async function init(){
@@ -3069,7 +3169,7 @@ async function init(){
   document.documentElement.dataset.theme=cfg.theme||'dark';
   document.documentElement.dataset.palette=cfg.palette||'amethyst';
   document.getElementById('themeBtn').textContent=(cfg.theme||'dark')==='light'?'🌙 Dark':'☀ Light';
-  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name||"Shaun's Personal Dashboard")} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.1.3</span>`;
+  document.querySelector('.logo-name').innerHTML=`${esc(cfg.name||"Shaun's Personal Dashboard")} <span style="font-size:11px;color:var(--muted);font-weight:400">v3.1.4</span>`;
   applyAppearance();
 
   document.getElementById('maDate').value=effectiveToday();
